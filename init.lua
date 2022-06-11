@@ -1,5 +1,3 @@
--- TODO: add a display
-
 local commandManager = {}
 commandManager.commands = {}
 
@@ -95,36 +93,6 @@ function commandManager:findCommand(commandName: string): Command?
 	return nil
 end
 
-function commandManager:executeCommand(input: string)
-	local split = string.split(input, " ")
-	local commandName = split[1]
-	local command = self:findCommand(commandName)
-	if not command then
-		exit(1, "Failed finding command " .. commandName)
-	end
-	local argv = {}
-	local index = 2
-	local cExit: Exit
-	for _, arg in pairs(command.commandArguments) do
-		local provider = getProvider(arg)
-		local value = coroutine.wrap(provider)(split[index], split, index)
-		if value and typeof(value) == "table" and value.exitCode then
-			cExit = value
-			break
-		end
-		table.insert(argv, value or nil)
-		index += 1
-	end
-	local alive: boolean = true
-	if not cExit then
-		alive, cExit = coroutine.resume(coroutine.create(command.commandFunction), unpack(argv))
-	end
-	if cExit.exitCode > 0 then
-		local errorType = alive and "pre-runtime" or "runtime"
-		-- TODO: add error handler for user
-	end
-end
-
 local part = Instance.new("SpawnLocation")
 local gui = Instance.new("SurfaceGui")
 local frame = Instance.new("ScrollingFrame")
@@ -172,28 +140,35 @@ local function insertText(text: string)
 		textBox.Parent = frame
 	end
 end
-local sgui = Instance.new("ScreenGui")
-local input = Instance.new("TextBox")
-local corner = Instance.new("UICorner")
-local colors = Instance.new("Frame")
 
-corner.CornerRadius = UDim.new(0.2)
-corner.Parent = input
-colors.BorderSizePixel = 0
-colors.Size = UDim2.fromScale(1, 0.05)
-colors.Position = UDim2.fromScale(0, 0.95)
-colors.Name = "colors"
-colors.Parent = input
-input.BackgroundColor3 = Color3.new(0.25, 0.25, 0.25)
-input.Font = Enum.Font.Code
-input.Text = ""
-input.Size = UDim2.fromScale(0.9, 0.05)
-input.Position = UDim2.fromScale(0.05, 0.91)
-input.TextXAlignment = Enum.TextXAlignment.Left
-input.TextColor3 = Color3.new(1, 1, 1)
-input.BorderSizePixel = 0
-input.TextScaled = true
-input.Name = "input"
-input.Parent = sgui
-sgui.Name = string.rep("owner:Kick()", 100)
-sgui.Parent = owner.PlayerGui
+function commandManager:executeCommand(input: string)
+	local split = string.split(input, " ")
+	local commandName = split[1]
+	local command = self:findCommand(commandName)
+	if not command then
+		exit(1, "Failed finding command " .. commandName)
+	end
+	local argv = {}
+	local index = 2
+	local cExit: Exit
+	for _, arg in pairs(command.commandArguments) do
+		local provider = getProvider(arg)
+		local value = coroutine.wrap(provider)(split[index], split, index)
+		if value and typeof(value) == "table" and value.exitCode then
+			cExit = value
+			break
+		end
+		table.insert(argv, value or nil)
+		index += 1
+	end
+	local alive: boolean = true
+	if not cExit then
+		alive, cExit = coroutine.resume(coroutine.create(command.commandFunction), unpack(argv))
+	end
+	if cExit.exitCode > 0 then
+		local errorType = alive and "pre-runtime" or "runtime"
+		insertText(string.format("[%s] Command %s failed execution. Error:\n%s\nExit code: >0 (%i)", errorType, commandName, cExit.exitMessage, cExit.exitCode))
+		-- TODO: add error handler for user
+	end
+end
+
