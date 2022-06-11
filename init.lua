@@ -1,4 +1,5 @@
-local Players = game:GetService("Players")
+-- TODO: add a display
+
 local commandManager = {}
 commandManager.commands = {}
 type Callback<T> = (...any) -> T
