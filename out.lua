@@ -1,3 +1,4 @@
+--> built by pack, a module bundler
 local commandManager = {}
 commandManager.commands = {}
 
@@ -167,15 +168,8 @@ function commandManager:executeCommand(input: string)
 	end
 	if cExit.exitCode > 0 then
 		local errorType = alive and "pre-runtime" or "runtime"
-		insertText(
-			string.format(
-				"[%s] Command %s failed execution. Error:\n%s\nExit code: >0 (%i)",
-				errorType,
-				commandName,
-				cExit.exitMessage,
-				cExit.exitCode
-			)
-		)
+		insertText(string.format("[%s] Command %s failed execution. Error:\n%s\nExit code: >0 (%i)", errorType, commandName, cExit.exitMessage, cExit.exitCode))
 		-- TODO: add error handler for user
 	end
 end
+
