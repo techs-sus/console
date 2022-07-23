@@ -1,10 +1,14 @@
 declare const owner: Player;
+declare const NLS: (code: string, parent: Instance) => LocalScript;
 const part = new Instance("SpawnLocation");
 const gui = new Instance("SurfaceGui");
 const frame = new Instance("ScrollingFrame");
 const list = new Instance("UIListLayout");
 const worldModel = new Instance("WorldModel");
+const remote = new Instance("RemoteEvent", owner.FindFirstChildOfClass("PlayerGui")!);
 const TweenService = game.GetService("TweenService");
+const RunService = game.GetService("RunService");
+const TextService = game.GetService("TextService");
 const Players = game.GetService("Players");
 const insults = [
 	"you really suck",
@@ -25,12 +29,12 @@ const insults = [
 	"im literally gonna turn you into a metatable",
 	"get ready to be obfuscated, no one wants the original you",
 	"microsoft doesn't approve of your actions",
-	"god why am i wasting time roasting you, i should roast someone else",
+	"god why am i wasting time roasting you, i should roast someone else more useful",
 	"the grass moves away from you, and it literally disappears when you touch it",
 	"obesity is an epidemic for a reason",
 ];
 gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud;
-gui.PixelsPerStud = 100;
+gui.PixelsPerStud = 125;
 gui.Face = Enum.NormalId.Back;
 gui.Adornee = part;
 frame.AutomaticCanvasSize = Enum.AutomaticSize.XY;
@@ -42,6 +46,7 @@ frame.Size = UDim2.fromScale(1, 1);
 list.FillDirection = Enum.FillDirection.Vertical;
 list.HorizontalAlignment = Enum.HorizontalAlignment.Left;
 list.VerticalAlignment = Enum.VerticalAlignment.Top;
+list.SortOrder = Enum.SortOrder.LayoutOrder;
 list.Parent = frame;
 frame.Parent = gui;
 part.Enabled = false;
@@ -82,6 +87,9 @@ const createText = (text: string) => {
 	box.AutomaticSize = Enum.AutomaticSize.XY;
 	box.TextSize = 35;
 	box.TextWrapped = true;
+	box.LayoutOrder = 1;
+	box.TextXAlignment = Enum.TextXAlignment.Left;
+	box.TextYAlignment = Enum.TextYAlignment.Top;
 	box.Parent = frame;
 	boxes.push({
 		created: os.clock(),
@@ -110,7 +118,27 @@ interface Command {
 	arguments: string[];
 }
 const commands: Command[] = [];
+const prompt = createText("");
+boxes.pop();
+const cursor = new Instance("Frame");
+cursor.BorderSizePixel = 0;
+cursor.Size = UDim2.fromScale(0, 1).add(UDim2.fromOffset(20, 0));
+cursor.BackgroundColor3 = new Color3(1, 1, 1);
+cursor.Position = UDim2.fromScale(1, 0);
+cursor.Parent = prompt;
 
+task.spawn(() => {
+	while (!0) {
+		if (cursor.BackgroundColor3 === new Color3(1, 1, 1)) {
+			cursor.BackgroundColor3 = frame.BackgroundColor3;
+		} else {
+			cursor.BackgroundColor3 = new Color3(1, 1, 1);
+		}
+		task.wait(0.5);
+	}
+});
+
+prompt.LayoutOrder = 10;
 const addCommand = (command: Command) => {
 	commands.push(command);
 };
@@ -143,7 +171,7 @@ const executeCommand = (name: string, args: string[]) => {
 		}
 	}
 	if (!command!) {
-		return error("Failed finding command!");
+		return `Failed finding command "${name}"!`;
 	}
 
 	let coro = coroutine.create(command.func);
@@ -164,6 +192,7 @@ const executeCommand = (name: string, args: string[]) => {
 		}
 	});
 	coroutine.resume(coro, ...constructed);
+	return command;
 };
 
 addCommand({
@@ -176,6 +205,127 @@ addCommand({
 	arguments: ["Player"],
 });
 
-executeCommand("cool", ["tabe"]);
+const filterRichText = (text: string) => {
+	return string.gsub(
+		string.gsub(
+			string.gsub(string.gsub(string.gsub(text, "&", "&amp;")[0], "'", "&apos;")[0], '"', "&quot;")[0],
+			"<",
+			"&lt;",
+		)[0],
+		">",
+		"&gt;",
+	)[0];
+};
+
+const getPromptText = (input: string) => {
+	const split = string.split(input, " ");
+	const commandName = split.shift();
+	const command =
+		commandName && commands.filter((v) => v.name === commandName || v.aliases.indexOf(commandName) !== -1)[0];
+
+	return `<font color="#00AAFF">[tech@vsb ~]$ </font>${
+		commandName &&
+		`<font color='${(command && typeOf(command) === "table" && "#FFBB00") || "#FF0000"}'>${filterRichText(
+			commandName,
+		)}</font>`
+	}${filterRichText((split.size() > 0 && " " + split.join(" ")) || "")}`;
+};
+
+const runCommand = (message: string) => {
+	const split = string.split(message, " ");
+	if (split.size() <= 0) {
+		return;
+	}
+	const commandName = split.shift()!;
+
+	let cmd: Command | string | undefined = executeCommand(commandName, split);
+	createText(getPromptText(message));
+	if (typeOf(cmd) === "string") {
+		createText(`<font color='#FF0000'>Error: ${filterRichText(cmd as string)}</font>`);
+	}
+};
+
+const screenGui = new Instance("ScreenGui");
+const textbox = new Instance("TextBox");
+const corner = new Instance("UICorner");
+textbox.BackgroundColor3 = new Color3(0.25, 0.25, 0.25);
+textbox.BorderSizePixel = 0;
+textbox.Position = UDim2.fromScale(0.025, 0.9);
+textbox.Size = UDim2.fromScale(0.95, 0.05);
+textbox.Font = Enum.Font.Code;
+textbox.TextScaled = true;
+textbox.TextXAlignment = Enum.TextXAlignment.Left;
+textbox.TextYAlignment = Enum.TextYAlignment.Top;
+textbox.TextColor3 = new Color3(1, 1, 1);
+textbox.Text = "";
+textbox.Visible = false;
+textbox.ClearTextOnFocus = false;
+corner.CornerRadius = new UDim(0.025, 0);
+corner.Parent = textbox;
+textbox.Parent = screenGui;
+screenGui.Parent = remote;
+remote.OnServerEvent.Connect((player: Player, requestType, text) => {
+	if (owner !== player) return;
+	if (!typeIs(requestType, "string")) return;
+	if (!typeIs(text, "string")) return;
+	switch (requestType as string) {
+		case "enter":
+			runCommand(text as string);
+			break;
+		case "typing":
+			prompt.Text = getPromptText(text);
+			break;
+		default:
+			break;
+	}
+});
+
+NLS(
+	`
+local remote = script.Parent
+local gui = remote:FindFirstChildOfClass("ScreenGui")
+local textbox = gui:FindFirstChildOfClass("TextBox")
+local UserInputService = game:GetService("UserInputService")
+textbox.Visible = false
+local function toggle()
+  textbox.Visible = not textbox.Visible
+  if textbox.Visible then
+    textbox.Transparency = 1
+    for i = 1, 10 do
+      textbox.Transparency = (10 - i) / 10
+      task.wait()
+    end
+    textbox:CaptureFocus()
+  else
+    textbox.Visible = true
+    textbox.Transparency = 0
+    for i = 1, 10 do
+      textbox.Transparency = i / 10
+      task.wait()
+    end
+    textbox.Visible = false
+  end
+end
+textbox.FocusLost:Connect(function(enter)
+  if enter then
+    remote:FireServer("enter", textbox.Text)
+    remote:FireServer("typing", "")
+    textbox.Text = ""
+    toggle()
+  end
+end)
+textbox:GetPropertyChangedSignal("Text"):Connect(function()
+  local text = textbox.Text
+  remote:FireServer("typing", text)
+end)
+UserInputService.InputEnded:Connect(function(obj, gpe)
+  if not gpe and obj.KeyCode == Enum.KeyCode.Semicolon then
+   toggle()
+  end
+end)
+print("[ts-client] Initialized!")
+`,
+	remote,
+);
 
 export {};
