@@ -1,98 +1,3 @@
-local commandManager = {}
-commandManager.commands = {}
-
-type Callback<T> = (...any) -> T
-
-type Exit = {
-	exitCode: number,
-	exitMessage: string,
-}
-
-type Command = {
-	fn: Callback<Exit>,
-	name: string,
-	description: string,
-	aliases: Array<string>,
-	arguments: Dictionary<string>,
-	moduleName: string?,
-}
-
-function commandManager:addCommand(
-	-- unpack type command
-	fn: Callback<Exit>,
-	name: string,
-	description: string,
-	aliases: Array<string>,
-	arguments: Dictionary<string>
-)
-	local command: Command = {
-		commandFunction = fn,
-		commandName = name,
-		commandDescription = description,
-		commandAliases = aliases,
-		commandArguments = arguments,
-	}
-	self.commands[#self.commands + 1] = command
-end
-
-local function exit(code: number, message: string?)
-	coroutine.yield({ exitCode = code, exitMessage = message or "ok!" })
-end
-
-type Argv = Array<string>
-
-local providers = {
-	luau = {},
-	console = {
-		command = function(commandName: string)
-			for _, v in pairs(commandManager.commands) do
-				if v.commandName == commandName then
-					return v
-				end
-			end
-			exit(1, "Failed finding command " .. commandName)
-		end,
-		argv = function(_, x: Argv)
-			return x
-		end,
-		raw = function(x: string)
-			return x
-		end,
-		string = {
-			combined = function(_, argv: Argv, index: number)
-				if not argv then
-					exit(1, "argv is nil, try adding more arguments")
-				end
-				return table.concat(argv, " ", index)
-			end,
-		},
-	},
-}
-
-local function getProvider(name: string): Callback<any>?
-	local split = string.split(name, "::")
-	-- we can use base providers table, as the start, as we are searching for a function
-	local ptr = providers
-	for _, v in ipairs(split) do
-		ptr = ptr[v]
-	end
-	if ptr == nil then
-		exit(1, "Failed finding provider " .. name)
-	elseif ptr and typeof(ptr) == "table" then
-		exit(1, "Provider string is not valid: " .. name)
-	end
-	return ptr
-end
-
-function commandManager:findCommand(commandName: string): Command?
-	for _, v: Command in pairs(self.commands) do
-		if v.commandName == commandName or table.find(v.aliases, commandName) then
-			return v
-		end
-	end
-	return nil
-end
-
 local part = Instance.new("SpawnLocation")
 local gui = Instance.new("SurfaceGui")
 local frame = Instance.new("ScrollingFrame")
@@ -101,7 +6,6 @@ local worldModel = Instance.new("WorldModel")
 gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 gui.PixelsPerStud = 150
 gui.Adornee = part
-gui.CanvasSize = Vector2.one * 256
 frame.AutomaticCanvasSize = Enum.AutomaticSize.XY
 frame.BackgroundColor3 = Color3.new(0.35, 0.35, 0.35)
 frame.CanvasSize = UDim2.fromScale(0, 0)
@@ -112,7 +16,6 @@ list.HorizontalAlignment = Enum.HorizontalAlignment.Left
 list.VerticalAlignment = Enum.VerticalAlignment.Top
 list.Parent = frame
 frame.Parent = gui
-gui.Parent = script
 part.Enabled = false
 part.Locked = true
 part.CanTouch = false
@@ -123,59 +26,45 @@ part.Color = Color3.new(0, 1, 1)
 part.Anchored = true
 part.Size = Vector3.new(16, 9, 0.01)
 part.Transparency = 0.5
+gui.Parent = script
 part.Parent = worldModel
+local prompt = "<font color='#00A0FF'>[tech@artixbox {directory}]$</font> {filtered_text}"
 
-local function insertText(text: string)
-	for str in string.gmatch(text, "[%S \r]+") do
-		local textBox = Instance.new("TextBox")
-		textBox.Font = Enum.Font.Code
-		textBox.TextSize = 40
-		textBox.BackgroundTransparency = 1
-		textBox.AutomaticSize = Enum.AutomaticSize.XY
-		textBox.TextColor3 = Color3.new(1, 1, 1)
-		textBox.TextXAlignment = Enum.TextXAlignment.Right
-		textBox.TextYAlignment = Enum.TextYAlignment.Top
-		textBox.Text = str
-		textBox.RichText = true
-		textBox.Parent = frame
-	end
+local function filterRichText(text: string)
+	return string.gsub(
+		string.gsub(
+			string.gsub(string.gsub(string.gsub(text, "&", "&amp;"), "<", "&lt;"), '"', "&quot;"),
+			"'",
+			"&apos;"
+		),
+		">",
+		"&gt;"
+	)
 end
 
-function commandManager:executeCommand(input: string)
-	local split = string.split(input, " ")
-	local commandName = split[1]
-	local command = self:findCommand(commandName)
-	if not command then
-		exit(1, "Failed finding command " .. commandName)
+local function fillInVariables(text: string, table: Dictionary<any>)
+	local s = text
+	for i, v in pairs(table) do
+		s = string.gsub(s, "{" .. i .. "}", v)
 	end
-	local argv = {}
-	local index = 2
-	local cExit: Exit
-	for _, arg in pairs(command.commandArguments) do
-		local provider = getProvider(arg)
-		local value = coroutine.wrap(provider)(split[index], split, index)
-		if value and typeof(value) == "table" and value.exitCode then
-			cExit = value
-			break
-		end
-		table.insert(argv, value or nil)
-		index += 1
-	end
-	local alive: boolean = true
-	if not cExit then
-		alive, cExit = coroutine.resume(coroutine.create(command.commandFunction), unpack(argv))
-	end
-	if cExit.exitCode > 0 then
-		local errorType = alive and "pre-runtime" or "runtime"
-		insertText(
-			string.format(
-				"[%s] Command %s failed execution. Error:\n%s\nExit code: >0 (%i)",
-				errorType,
-				commandName,
-				cExit.exitMessage,
-				cExit.exitCode
-			)
-		)
-		-- TODO: add error handler for user
-	end
+	return s
 end
+
+local function createText(text: string)
+	local box = Instance.new("TextBox")
+	box.Text = text
+	box.RichText = true
+	box.TextSize = 40
+	box.TextWrapped = true
+	box.Font = Enum.Font.Code
+	box.AutomaticSize = Enum.AutomaticSize.XY
+	box.Name = os.time()
+	box.TextColor3 = Color3.new(1, 1, 1)
+	box.BackgroundTransparency = 1
+	box.Parent = frame
+end
+
+createText(fillInVariables(prompt, {
+	directory = "~",
+	filtered_text = filterRichText("hello"),
+}))

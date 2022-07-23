@@ -1,4 +1,0 @@
-{
-  "serverMain": "./init.lua",
-  "outFile": "./out.lua"
-}
