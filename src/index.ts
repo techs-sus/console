@@ -422,7 +422,7 @@ const tpPart = () => {
 	if (character && character.IsA("Model")) {
 		let hrp = character.FindFirstChild("HumanoidRootPart");
 		if (hrp) {
-			part.CFrame = (hrp as BasePart).CFrame.mul(new CFrame(0, 3, -3));
+			part.CFrame = (hrp as BasePart).CFrame.mul(new CFrame(0, 0, -3));
 		}
 	}
 };
