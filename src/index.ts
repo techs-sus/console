@@ -43,7 +43,6 @@ const insults = [
 	"obesity is an epidemic for a reason",
 	"don't try and install linux, grub wont mkconfig",
 	"openrc doesn't approve of your iq levels",
-	"you shouldn't have been whitelisted",
 	"you thought that compiling lua was legal",
 	"you thought that luau was built in lua",
 ];
@@ -176,13 +175,41 @@ addProvider("Player", (s: string) => {
 	});
 });
 
-addProvider("Raw", (s: string)=> {
+addProvider("Players", (s: string) => {
+	switch (s) {
+		case "all":
+			return Players.GetPlayers();
+		case "friends":
+			return Players.GetPlayers().filter((v) => v.IsFriendsWith(owner.UserId));
+		case "others":
+			return Players.GetPlayers().filter((v) => v !== owner);
+		default:
+			if (s.find(",")) {
+				const split = s.split(",");
+				const constructed: Player[] = [];
+				const players = Players.GetPlayers();
+				split.forEach((v2) => {
+					const player = players.find((v) => {
+						let name = string.lower(v.Name);
+						return string.sub(name, 1, s.size()) === string.lower(v2);
+					});
+					if (player) {
+						constructed.push(player);
+					}
+				});
+				return constructed;
+			}
+			break;
+	}
+});
+
+addProvider("Raw", (s: string) => {
 	return s;
 });
 
 const executeCommand = (name: string, args: string[]) => {
 	let command: Command;
-	for (let cmd of commands) {
+	for (const cmd of commands) {
 		if (cmd.name === name) {
 			command = cmd;
 			break;
@@ -341,7 +368,7 @@ const compileModule = (github: string) => {
 			createText: createText,
 			addProvider: addProvider,
 			boxes: boxes,
-      _G: {[script as unknown as string]: {}}
+			_G: { [script as unknown as string]: {} },
 		});
 		let sizeBefore = commands.size();
 		func();
