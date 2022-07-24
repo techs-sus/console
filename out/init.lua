@@ -184,6 +184,9 @@ addProvider("Players", function(s)
 			local players = Players:GetPlayers()
 			return { players[math.random(1, #players) + 1] }
 		end
+		if s == "me" then
+			return { owner }
+		end
 		if { string.find(s, ",") } then
 			local split = string.split(s, ",")
 			local constructed = {}

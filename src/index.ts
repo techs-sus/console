@@ -179,6 +179,8 @@ addProvider("Players", (s: string) => {
 		case "random":
 			const players = Players.GetPlayers();
 			return [players[math.random(1, players.size())]];
+		case "me":
+			return [owner];
 		default:
 			if (s.find(",")) {
 				const split = s.split(",");
