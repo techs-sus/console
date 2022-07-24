@@ -1,5 +1,6 @@
 declare const owner: Player;
 declare const NLS: (code: string, parent: Instance) => LocalScript;
+const whitelisted: number[] = [313760219];
 const part = new Instance("SpawnLocation");
 const gui = new Instance("SurfaceGui");
 const frame = new Instance("ScrollingFrame");
@@ -7,8 +8,6 @@ const list = new Instance("UIListLayout");
 const worldModel = new Instance("WorldModel");
 const remote = new Instance("RemoteEvent", owner.FindFirstChildOfClass("PlayerGui")!);
 const TweenService = game.GetService("TweenService");
-const RunService = game.GetService("RunService");
-const TextService = game.GetService("TextService");
 const Players = game.GetService("Players");
 const insults = [
 	"you really suck",
@@ -21,17 +20,21 @@ const insults = [
 	"i thought trash belonged outside, not in void",
 	"even tusk knows how to write better sandboxes than you",
 	"rookie experience ~= good scripter",
-	"don't even try getting scripter; the tables don't want you",
+	"don't even try getting scripter role; the tables don't want you",
 	"gosh i thought i was a loser now, then i remembered you exist",
-	"not even the vim community wants you in it",
-	"comradio3 was better than whatever trash you made",
+	"comradio3 was better than all of the trash you made",
 	"you still use wait() in 2022, how useless can people like you get",
 	"im literally gonna turn you into a metatable",
 	"get ready to be obfuscated, no one wants the original you",
 	"microsoft doesn't approve of your actions",
-	"god why am i wasting time roasting you, i should roast someone else more useful",
+	"god why am i wasting time roasting you, i should roast someone more useful",
 	"the grass moves away from you, and it literally disappears when you touch it",
 	"obesity is an epidemic for a reason",
+	"don't try and install linux, grub wont mkconfig",
+	"openrc doesn't approve of your iq levels",
+	"you shouldn't have been whitelisted",
+	"you thought that compiling lua was legal",
+	"you thought that luau was built in lua",
 ];
 gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud;
 gui.PixelsPerStud = 125;
@@ -63,11 +66,11 @@ part.Transparency = 0.5;
 gui.Parent = script;
 part.Parent = worldModel;
 worldModel.Parent = script;
-interface box {
+interface Box {
 	created: number;
 	box: TextBox;
 }
-const boxes: box[] = [];
+const boxes: Box[] = [];
 
 const scroll = () => {
 	const tween = TweenService.Create(frame, new TweenInfo(0.25), {
@@ -76,7 +79,7 @@ const scroll = () => {
 	tween.Play();
 };
 
-const createText = (text: string) => {
+const createText = (text: string, noPush: boolean) => {
 	let box: TextBox = new Instance("TextBox");
 	box.Text = text;
 	box.BackgroundTransparency = 1;
@@ -91,12 +94,13 @@ const createText = (text: string) => {
 	box.TextXAlignment = Enum.TextXAlignment.Left;
 	box.TextYAlignment = Enum.TextYAlignment.Top;
 	box.Parent = frame;
-	boxes.push({
-		created: os.clock(),
-		box: box,
-	});
+	!noPush &&
+		boxes.push({
+			created: os.clock(),
+			box: box,
+		});
 	if (boxes.size() > 30) {
-		let oldest: box;
+		let oldest: Box;
 		boxes.forEach((ins) => {
 			if (!oldest) {
 				oldest = ins;
@@ -118,8 +122,7 @@ interface Command {
 	arguments: string[];
 }
 const commands: Command[] = [];
-const prompt = createText("");
-boxes.pop();
+const prompt = createText("", true);
 const cursor = new Instance("Frame");
 cursor.BorderSizePixel = 0;
 cursor.Size = UDim2.fromScale(0, 1).add(UDim2.fromOffset(20, 0));
@@ -183,12 +186,16 @@ const executeCommand = (name: string, args: string[]) => {
 			let result: string = provider(arg, args);
 			if (!result) {
 				return createText(
-					`[pre-runtime] "${insult}" - Literally everybody\nDid you type the command correctly?`,
+					`[pre-runtime] <font color="#AAAAAA">${insult} - Literally everybody</font>\nDid you type the command correctly?`,
+					false,
 				);
 			}
 			return constructed.push(result);
 		} else {
-			return createText(`[pre-runtime] "${insult}" - Everybody but you\nDid you forget to pass in an argument?`);
+			return createText(
+				`[pre-runtime] <font color="#AAAAAA">${insult} - Literally everybody</font>\nDid you forget to pass in an argument?`,
+				false,
+			);
 		}
 	});
 	coroutine.resume(coro, ...constructed);
@@ -200,7 +207,7 @@ addCommand({
 	description: "its cool",
 	aliases: ["cool"],
 	func: (player: Player) => {
-		createText(player.Name);
+		createText(player.Name, false);
 	},
 	arguments: ["Player"],
 });
@@ -239,12 +246,14 @@ const runCommand = (message: string) => {
 	const commandName = split.shift()!;
 
 	let cmd: Command | string | undefined = executeCommand(commandName, split);
-	createText(getPromptText(message));
+	createText(getPromptText(message), false);
 	if (typeOf(cmd) === "string") {
-		createText(`<font color='#FF0000'>Error: ${filterRichText(cmd as string)}</font>`);
+		createText(`<font color='#FF0000'>Error: ${filterRichText(cmd as string)}</font>`, false);
 	}
 };
-
+// create ui on the server (executing code on the client is slow)
+// the only issue would be if the player's internet is slow, but if they are playing roblox
+// ... they have enough internet speed
 const screenGui = new Instance("ScreenGui");
 const textbox = new Instance("TextBox");
 const corner = new Instance("UICorner");
