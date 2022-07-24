@@ -80,7 +80,7 @@ interface Box {
 	created: number;
 	box: TextBox;
 }
-const boxes: Box[] = [];
+export const boxes: Box[] = [];
 
 const scroll = () => {
 	const tween = TweenService.Create(frame, new TweenInfo(0.25), {
@@ -89,7 +89,7 @@ const scroll = () => {
 	tween.Play();
 };
 
-const createText = (text: string, noPush: boolean) => {
+export const createText = (text: string, noPush: boolean) => {
 	let box: TextBox = new Instance("TextBox");
 	box.Text = text;
 	box.BackgroundTransparency = 1;
@@ -124,22 +124,26 @@ const createText = (text: string, noPush: boolean) => {
 	scroll();
 	return box;
 };
-interface Command {
+
+export interface Command {
 	name: string;
 	description: string;
 	aliases: string[];
 	func: Callback;
 	arguments: string[];
 }
+
 const commands: Command[] = [];
-const prompt = createText("", true);
 const cursor = new Instance("Frame");
+const prompt = createText("", true);
+prompt.LayoutOrder = 100;
 cursor.BorderSizePixel = 0;
 cursor.Size = UDim2.fromScale(0, 1).add(UDim2.fromOffset(20, 0));
 cursor.BackgroundColor3 = new Color3(1, 1, 1);
 cursor.Position = UDim2.fromScale(1, 0);
 cursor.Parent = prompt;
 
+// blinking cursor loop
 task.spawn(() => {
 	while (true) {
 		if (cursor.BackgroundColor3 === new Color3(1, 1, 1)) {
@@ -151,13 +155,12 @@ task.spawn(() => {
 	}
 });
 
-prompt.LayoutOrder = 100;
-const addCommand = (command: Command) => {
+export const addCommand = (command: Command) => {
 	commands.push(command);
 };
 
-let providers = new Map<string, Callback>();
-const addProvider = (provider: string, callback: Callback) => {
+const providers = new Map<string, Callback>();
+export const addProvider = (provider: string, callback: Callback) => {
 	providers.set(provider, callback);
 };
 
@@ -212,7 +215,7 @@ const executeCommand = (name: string, args: string[]) => {
 	return command;
 };
 
-const filterRichText = (text: string) => {
+export const filterRichText = (text: string) => {
 	return string.gsub(
 		string.gsub(
 			string.gsub(string.gsub(string.gsub(text, "&", "&amp;")[0], "'", "&apos;")[0], '"', "&quot;")[0],
@@ -238,7 +241,7 @@ const getPromptText = (input: string) => {
 	}${filterRichText((split.size() > 0 && " " + split.join(" ")) || "")}`;
 };
 
-const runCommand = (message: string) => {
+export const runCommand = (message: string) => {
 	const split = string.split(message, " ");
 	if (split.size() <= 0) {
 		return;
@@ -254,6 +257,7 @@ const runCommand = (message: string) => {
 		createText(`<font color='#FF0000'>Error: ${filterRichText(cmd as string)}</font>`, false);
 	}
 };
+
 // create ui on the server (executing code on the client is slow)
 // the only issue would be if the player's internet is slow, but if they are playing roblox
 // ... they have enough internet speed
@@ -277,6 +281,7 @@ corner.CornerRadius = new UDim(0.025, 0);
 corner.Parent = textbox;
 textbox.Parent = screenGui;
 screenGui.Parent = remote;
+
 remote.OnServerEvent.Connect((player: Player, requestType, text) => {
 	if (owner !== player) return;
 	if (!typeIs(requestType, "string")) return;
