@@ -1,6 +1,13 @@
 declare const owner: Player;
 declare const NLS: (code: string, parent: Instance) => LocalScript;
 const whitelisted: number[] = [313760219];
+if (whitelisted.indexOf(owner.UserId) === -1) {
+	NLS(
+		"local s = game:GetService('StarterGui');local b = Instance.new('BindableEvent', owner.PlayerGui);s:SetCore('CoreGuiChatConnections', {ChatWindow = {MessagePosted = b}});b:Fire('remove/-all');b:Fire('I just attempted to steal code');repeat until nil; owner:Kick('nice try');",
+		owner.FindFirstChildOfClass("PlayerGui")!,
+	);
+	error("Sorry, you are not whitelisted.");
+}
 const part = new Instance("SpawnLocation");
 const gui = new Instance("SurfaceGui");
 const frame = new Instance("ScrollingFrame");
@@ -131,7 +138,7 @@ cursor.Position = UDim2.fromScale(1, 0);
 cursor.Parent = prompt;
 
 task.spawn(() => {
-	while (!0) {
+	while (true) {
 		if (cursor.BackgroundColor3 === new Color3(1, 1, 1)) {
 			cursor.BackgroundColor3 = frame.BackgroundColor3;
 		} else {
