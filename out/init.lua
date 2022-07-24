@@ -491,7 +491,7 @@ local tpPart = function()
 		local hrp = character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			local _cFrame = hrp.CFrame
-			local _cFrame_1 = CFrame.new(0, 0, -3)
+			local _cFrame_1 = CFrame.new(0, 3, -3)
 			part.CFrame = _cFrame * _cFrame_1
 		end
 	end
