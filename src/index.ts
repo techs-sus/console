@@ -339,7 +339,7 @@ const recursiveGet = (stuff: string, out: string) => {
 			// its a local import
 			stuff = stuff.gsub(
 				'TS.import%(script, script, (["%a%s, ]+)%)',
-				`(function() ${recursiveGet(HttpService.GetAsync(`${out}/${split.join("") + ".lua"}`), out)} end)()`,
+				`(function() ${recursiveGet(HttpService.GetAsync(`${out}/${split.join("") + ".lua"}`, true), out)} end)()`,
 			)[0] as string;
 			return stuff;
 		} else {
@@ -354,7 +354,7 @@ const compileModule = (github: string) => {
 	const base = `https://raw.githubusercontent.com/${github}/master`;
 	const out = `${base}/out`;
 	const init = `${out}/init.lua`;
-	let stuff = HttpService.GetAsync(init);
+	let stuff = HttpService.GetAsync(init, true);
 	let final = recursiveGet(stuff, out);
 	const func = loadstring(final!);
 	if (func) {
@@ -457,6 +457,7 @@ addCommand({
 });
 
 createText("Welcome to console v7! (typescript edition)", false);
+createText("This console is licensed under the GNU GPL v3 license. (techs-sus/console)", false);
 createText('You can compile modules with "pkg --compile {module}".', false);
 createText(
 	"All modules are created in typescript. If you would like to create a module, please do the following:\n1. Create a new rbxts package\n2. Remove out from .gitignore\n3. Import the index.d.ts from console\n4. Publish on github\n5. Use your package with pkg --compile <your github username>/<your github repository>",

@@ -394,7 +394,7 @@ recursiveGet = function(stuff, out)
 				_result[_k] = tostring(_v)
 			end
 			-- ▲ ReadonlyArray.join ▲
-			local _arg1 = "(function() " .. (tostring((recursiveGet(_fn:GetAsync(out .. ("/" .. (table.concat(_result, "") .. ".lua"))), out))) .. " end)()")
+			local _arg1 = "(function() " .. (tostring((recursiveGet(_fn:GetAsync(out .. ("/" .. (table.concat(_result, "") .. ".lua")), true), out))) .. " end)()")
 			stuff = (string.gsub(stuff, 'TS.import%(script, script, (["%a%s, ]+)%)', _arg1))
 			return stuff
 		else
@@ -408,7 +408,7 @@ local compileModule = function(github)
 	local base = "https://raw.githubusercontent.com/" .. (github .. "/master")
 	local out = base .. "/out"
 	local init = out .. "/init.lua"
-	local stuff = HttpService:GetAsync(init)
+	local stuff = HttpService:GetAsync(init, true)
 	local final = recursiveGet(stuff, out)
 	local func = loadstring(final)
 	if func then
@@ -527,6 +527,7 @@ addCommand({
 	arguments = {},
 })
 createText("Welcome to console v7! (typescript edition)", false)
+createText("This console is licensed under the GNU GPL v3 license. (techs-sus/console)", false)
 createText('You can compile modules with "pkg --compile {module}".', false)
 createText("All modules are created in typescript. If you would like to create a module, please do the following:\n1. Create a new rbxts package\n2. Remove out from .gitignore\n3. Import the index.d.ts from console\n4. Publish on github\n5. Use your package with pkg --compile <your github username>/<your github repository>", false)
 NLS([[
