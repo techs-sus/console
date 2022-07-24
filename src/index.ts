@@ -1,3 +1,6 @@
+// Made by tech
+// Reach me at techyesreal#5007
+
 declare const owner: Player;
 declare const NLS: (code: string, parent: Instance) => LocalScript;
 const whitelisted: number[] = [313760219];
@@ -97,7 +100,7 @@ const createText = (text: string, noPush: boolean) => {
 	box.AutomaticSize = Enum.AutomaticSize.XY;
 	box.TextSize = 35;
 	box.TextWrapped = true;
-	box.LayoutOrder = 1;
+	box.LayoutOrder = 9;
 	box.TextXAlignment = Enum.TextXAlignment.Left;
 	box.TextYAlignment = Enum.TextYAlignment.Top;
 	box.Parent = frame;
@@ -148,7 +151,7 @@ task.spawn(() => {
 	}
 });
 
-prompt.LayoutOrder = 10;
+prompt.LayoutOrder = 100;
 const addCommand = (command: Command) => {
 	commands.push(command);
 };
@@ -209,16 +212,6 @@ const executeCommand = (name: string, args: string[]) => {
 	return command;
 };
 
-addCommand({
-	name: "coolness",
-	description: "its cool",
-	aliases: ["cool"],
-	func: (player: Player) => {
-		createText(player.Name, false);
-	},
-	arguments: ["Player"],
-});
-
 const filterRichText = (text: string) => {
 	return string.gsub(
 		string.gsub(
@@ -251,16 +244,20 @@ const runCommand = (message: string) => {
 		return;
 	}
 	const commandName = split.shift()!;
+	createText(getPromptText(message), false);
+	if (commandName === "") {
+		return;
+	}
 
 	let cmd: Command | string | undefined = executeCommand(commandName, split);
-	createText(getPromptText(message), false);
-	if (typeOf(cmd) === "string") {
+	if (cmd && typeOf(cmd) === "string") {
 		createText(`<font color='#FF0000'>Error: ${filterRichText(cmd as string)}</font>`, false);
 	}
 };
 // create ui on the server (executing code on the client is slow)
 // the only issue would be if the player's internet is slow, but if they are playing roblox
 // ... they have enough internet speed
+prompt.Text = getPromptText("");
 const screenGui = new Instance("ScreenGui");
 const textbox = new Instance("TextBox");
 const corner = new Instance("UICorner");
@@ -296,28 +293,41 @@ remote.OnServerEvent.Connect((player: Player, requestType, text) => {
 	}
 });
 
+addCommand({
+	name: "clear",
+	description: "Clear the screen",
+	aliases: ["cls"],
+	func: () => {
+		boxes.forEach((v) => v.box.Destroy());
+		boxes.clear();
+	},
+	arguments: [],
+});
+
 NLS(
 	`
 local remote = script.Parent
 local gui = remote:FindFirstChildOfClass("ScreenGui")
 local textbox = gui:FindFirstChildOfClass("TextBox")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local RenderStepped = RunService.RenderStepped
 textbox.Visible = false
 local function toggle()
   textbox.Visible = not textbox.Visible
   if textbox.Visible then
+    textbox:CaptureFocus()
     textbox.Transparency = 1
     for i = 1, 10 do
       textbox.Transparency = (10 - i) / 10
-      task.wait()
+      RenderStepped:Wait()
     end
-    textbox:CaptureFocus()
   else
     textbox.Visible = true
     textbox.Transparency = 0
     for i = 1, 10 do
       textbox.Transparency = i / 10
-      task.wait()
+      RenderStepped:Wait()
     end
     textbox.Visible = false
   end
