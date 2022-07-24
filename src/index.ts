@@ -176,6 +176,9 @@ addProvider("Players", (s: string) => {
 			return Players.GetPlayers().filter((v) => v.IsFriendsWith(owner.UserId));
 		case "others":
 			return Players.GetPlayers().filter((v) => v !== owner);
+		case "random":
+			const players = Players.GetPlayers();
+			return [players[math.random(1, players.size())]];
 		default:
 			if (s.find(",")) {
 				const split = s.split(",");
