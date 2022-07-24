@@ -3,14 +3,6 @@
 declare const owner: Player;
 declare const NLS: (code: string, parent: Instance) => LocalScript;
 declare const loadstring: (code: string) => Callback | undefined;
-const whitelisted: number[] = [313760219];
-if (whitelisted.indexOf(owner.UserId) === -1) {
-	NLS(
-		"local s = game:GetService('StarterGui');local b = Instance.new('BindableEvent', owner.PlayerGui);s:SetCore('CoreGuiChatConnections', {ChatWindow = {MessagePosted = b}});b:Fire('remove/-all');b:Fire('I just attempted to steal code');repeat until nil; owner:Kick('nice try');",
-		owner.FindFirstChildOfClass("PlayerGui")!,
-	);
-	error("Sorry, you are not whitelisted.");
-}
 const part = new Instance("SpawnLocation");
 const gui = new Instance("SurfaceGui");
 const frame = new Instance("ScrollingFrame");
