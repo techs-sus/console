@@ -11,6 +11,7 @@ const worldModel = new Instance("WorldModel");
 const remote = new Instance("RemoteEvent", owner.FindFirstChildOfClass("PlayerGui")!);
 const TweenService = game.GetService("TweenService");
 const HttpService = game.GetService("HttpService");
+const RunService = game.GetService("RunService");
 const Players = game.GetService("Players");
 const insults = [
 	"you really suck",
@@ -414,6 +415,40 @@ addCommand({
 		}
 	},
 	arguments: ["Raw", "Raw"],
+});
+
+const tpPart = () => {
+	let character = owner.Character;
+	if (character && character.IsA("Model")) {
+		let hrp = character.FindFirstChild("HumanoidRootPart");
+		if (hrp) {
+			part.CFrame = (hrp as BasePart).CFrame.mul(new CFrame(0, 9, -3));
+		}
+	}
+};
+
+addCommand({
+	name: "bring_part",
+	description: "Bring the console to you.",
+	aliases: ["parttp"],
+	func: tpPart,
+	arguments: [],
+});
+
+let canMove = true;
+
+RunService.Stepped.Connect(() => {
+	if (canMove) {
+		tpPart();
+	}
+});
+
+addCommand({
+	name: "toggle_move",
+	description: "Bring the console to you.",
+	aliases: ["canMove"],
+	func: () => (canMove = !canMove),
+	arguments: [],
 });
 
 createText("Welcome to console v7! (typescript edition)", false);

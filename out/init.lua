@@ -8,6 +8,7 @@ local worldModel = Instance.new("WorldModel")
 local remote = Instance.new("RemoteEvent", owner:FindFirstChildOfClass("PlayerGui"))
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local insults = { "you really suck", "i can't believe you failed one of the simplest tasks", "even dino knows how to do this better", "god you really need some sleeping pills that last forever", "your oxygen should be transferred to someone else who needs it more", "how stupid are you to forget that coroutines existed", "god you are so useless i cant believe your parents didn't leave you", "i thought trash belonged outside, not in void", "even tusk knows how to write better sandboxes than you", "rookie experience ~= good scripter", "don't even try getting scripter role; the tables don't want you", "gosh i thought i was a loser now, then i remembered you exist", "comradio3 was better than all of the trash you made", "you still use wait() in 2022, how useless can people like you get", "im literally gonna turn you into a metatable", "get ready to be obfuscated, no one wants the original you", "microsoft doesn't approve of your actions", "god why am i wasting time roasting you, i should roast someone more useful", "the grass moves away from you, and it literally disappears when you touch it", "obesity is an epidemic for a reason", "don't try and install linux, grub wont mkconfig", "openrc doesn't approve of your iq levels", "you thought that compiling lua was legal", "you thought that luau was built in lua" }
 gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -483,6 +484,40 @@ addCommand({
 		end
 	end,
 	arguments = { "Raw", "Raw" },
+})
+local tpPart = function()
+	local character = owner.Character
+	if character and character:IsA("Model") then
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local _cFrame = hrp.CFrame
+			local _cFrame_1 = CFrame.new(0, 9, -3)
+			part.CFrame = _cFrame * _cFrame_1
+		end
+	end
+end
+addCommand({
+	name = "bring_part",
+	description = "Bring the console to you.",
+	aliases = { "parttp" },
+	func = tpPart,
+	arguments = {},
+})
+local canMove = true
+RunService.Stepped:Connect(function()
+	if canMove then
+		tpPart()
+	end
+end)
+addCommand({
+	name = "toggle_move",
+	description = "Bring the console to you.",
+	aliases = { "canMove" },
+	func = function()
+		canMove = not canMove
+		return canMove
+	end,
+	arguments = {},
 })
 createText("Welcome to console v7! (typescript edition)", false)
 createText('You can compile modules with "pkg --compile {module}".', false)
