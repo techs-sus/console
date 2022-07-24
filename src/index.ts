@@ -1,8 +1,8 @@
 // Made by tech
-// Reach me at techyesreal#5007
 
 declare const owner: Player;
 declare const NLS: (code: string, parent: Instance) => LocalScript;
+declare const loadstring: (code: string) => Callback | undefined;
 const whitelisted: number[] = [313760219];
 if (whitelisted.indexOf(owner.UserId) === -1) {
 	NLS(
@@ -18,6 +18,7 @@ const list = new Instance("UIListLayout");
 const worldModel = new Instance("WorldModel");
 const remote = new Instance("RemoteEvent", owner.FindFirstChildOfClass("PlayerGui")!);
 const TweenService = game.GetService("TweenService");
+const HttpService = game.GetService("HttpService");
 const Players = game.GetService("Players");
 const insults = [
 	"you really suck",
@@ -175,6 +176,10 @@ addProvider("Player", (s: string) => {
 	});
 });
 
+addProvider("Raw", (s: string)=> {
+	return s;
+});
+
 const executeCommand = (name: string, args: string[]) => {
 	let command: Command;
 	for (let cmd of commands) {
@@ -241,7 +246,7 @@ const getPromptText = (input: string) => {
 	}${filterRichText((split.size() > 0 && " " + split.join(" ")) || "")}`;
 };
 
-export const runCommand = (message: string) => {
+const runCommand = (message: string) => {
 	const split = string.split(message, " ");
 	if (split.size() <= 0) {
 		return;
@@ -298,6 +303,64 @@ remote.OnServerEvent.Connect((player: Player, requestType, text) => {
 	}
 });
 
+const recursiveGet = (stuff: string, out: string) => {
+	let matches = string.match(stuff, 'TS.import%(script, script, (["%a%s, ]+)%)')[0];
+	if (!matches) {
+		return stuff;
+	}
+	if (typeIs(matches, "string")) {
+		let split = string.split(matches, ",").map((v) => v.match("%a+"));
+		if (split.size() === 1) {
+			// its a local import
+			stuff = stuff.gsub(
+				'TS.import%(script, script, (["%a%s, ]+)%)',
+				`(function() ${recursiveGet(HttpService.GetAsync(`${out}/${split.join("") + ".lua"}`), out)} end)()`,
+			)[0] as string;
+			return stuff;
+		} else {
+			return stuff;
+		}
+	}
+};
+
+const compileModule = (github: string) => {
+	// github as in person/repo
+	// TS.import(script, script, "test").default
+	const base = `https://raw.githubusercontent.com/${github}/master`;
+	const out = `${base}/out`;
+	const init = `${out}/init.lua`;
+	let stuff = HttpService.GetAsync(init);
+	let final = recursiveGet(stuff, out);
+	const func = loadstring(final!);
+	if (func) {
+		createText(`Finished compiling ${github} (github repository)`, false);
+		loadstring(
+			"local table = {...}; local v1 = table[2]; setfenv(table[1], setmetatable(v1, {__index = getfenv(0)}))",
+		)!(func, {
+			addCommand: addCommand,
+			createText: createText,
+			addProvider: addProvider,
+			boxes: boxes,
+      _G: {[script as unknown as string]: {}}
+		});
+		let sizeBefore = commands.size();
+		func();
+		if (commands.size() - sizeBefore <= 0) {
+			return;
+		}
+		createText(`Module ${github} added new commands.`, false);
+		for (let i = sizeBefore; i < commands.size(); i++) {
+			const command = commands[i];
+			createText(
+				`command ${command.name}, shorthands [${command.aliases.join(",")}] description: ${
+					command.description
+				}\narguments: [${command.arguments.join(", ")}]`,
+				false,
+			);
+		}
+	}
+};
+
 addCommand({
 	name: "clear",
 	description: "Clear the screen",
@@ -308,6 +371,38 @@ addCommand({
 	},
 	arguments: [],
 });
+
+addCommand({
+	name: "pkg",
+	description: "Package manager",
+	aliases: ["yay"],
+	func: (raw: string, raw2: string) => {
+		if (raw === "--compile") {
+			createText("calling compileModule with raw2 (" + raw2 + ")", false);
+			compileModule(raw2);
+		}
+		if (raw === "--list") {
+			createText("Listing all commands:", false);
+			for (let i = 0; i < commands.size(); i++) {
+				const command = commands[i];
+				createText(
+					`${command.name}, aliases [${command.aliases.join(",")}] description: "${
+						command.description
+					}" args: [${command.arguments.join(", ")}]`,
+					false,
+				);
+			}
+		}
+	},
+	arguments: ["Raw", "Raw"],
+});
+
+createText("Welcome to console v7! (typescript edition)", false);
+createText('You can compile modules with "pkg --compile {module}".', false);
+createText(
+	"All modules are created in typescript. If you would like to create a module, please do the following:\n1. Create a new rbxts package\n2. Remove out from .gitignore\n3. Import the index.d.ts from console\n4. Publish on github\n5. Use your package with pkg --compile <your github username>/<your github repository>",
+	false,
+);
 
 NLS(
 	`
